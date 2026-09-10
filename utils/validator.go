@@ -55,6 +55,8 @@ func messageFor(fe validator.FieldError) string {
 		return fmt.Sprintf("must be at most %s characters", fe.Param())
 	case "oneof":
 		return fmt.Sprintf("must be one of: %s", strings.ReplaceAll(fe.Param(), " ", ", "))
+	case "datetime":
+		return fmt.Sprintf("must be a valid date in %s format", datePattern(fe.Param()))
 	case "gte":
 		return fmt.Sprintf("must be %s or greater", fe.Param())
 	case "lte":
@@ -62,4 +64,21 @@ func messageFor(fe validator.FieldError) string {
 	default:
 		return fmt.Sprintf("failed the %q rule", fe.Tag())
 	}
+}
+
+// layoutPatterns rewrites a Go reference-time layout (the parameter of the
+// validator's `datetime` rule) into the conventional placeholder form used in
+// the API docs, so error messages never leak Go's reference date.
+var layoutPatterns = strings.NewReplacer(
+	"2006", "YYYY",
+	"01", "MM",
+	"02", "DD",
+	"15", "HH",
+	"04", "mm",
+	"05", "ss",
+)
+
+// datePattern turns a layout such as "2006-01-02" into "YYYY-MM-DD".
+func datePattern(layout string) string {
+	return layoutPatterns.Replace(layout)
 }

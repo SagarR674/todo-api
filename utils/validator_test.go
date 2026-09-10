@@ -7,6 +7,7 @@ type sample struct {
 	Email    string `json:"email"    validate:"required,email"`
 	Password string `json:"password" validate:"required,min=8"`
 	Status   string `json:"status"   validate:"omitempty,oneof=pending in_progress completed"`
+	DueDate  string `json:"due_date" validate:"omitempty,datetime=2006-01-02"`
 	Hidden   string `json:"-"        validate:"required"`
 }
 
@@ -49,5 +50,12 @@ func TestValidateStruct_Messages(t *testing.T) {
 	errs = ValidateStruct(sample{Email: "x@y.z", Password: "abcdefgh", Hidden: "h"})
 	if got := errs["name"]; got != "name is required" {
 		t.Errorf("name message = %q", got)
+	}
+}
+
+func TestValidateStruct_DateMessage(t *testing.T) {
+	errs := ValidateStruct(sample{Name: "Al", Email: "x@y.z", Password: "abcdefgh", DueDate: "15-09-2026", Hidden: "h"})
+	if got := errs["due_date"]; got != "must be a valid date in YYYY-MM-DD format" {
+		t.Errorf("due_date message = %q", got)
 	}
 }
