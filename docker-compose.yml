@@ -1,0 +1,44 @@
+# Run the whole stack with:  docker compose up --build
+#
+# The API waits for MySQL to be healthy, then applies migrations automatically
+# (AUTO_MIGRATE=true) before serving on http://localhost:8080.
+
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-todo_db}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${DB_PASSWORD:-rootpassword}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      PORT: "8080"
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-rootpassword}
+      DB_NAME: ${DB_NAME:-todo_db}
+      AUTO_MIGRATE: "true"
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-value-in-production}
+      JWT_EXPIRY: 24h
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      LOG_LEVEL: info
+    ports:
+      - "8080:8080"
+
+volumes:
+  db_data:

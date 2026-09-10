@@ -1,0 +1,17 @@
+.git
+.github
+.gitignore
+.gitattributes
+.env
+*.env
+!.env.example
+bin/
+web/
+scripts/
+postman/
+*.md
+!README.md
+coverage.out
+*.log
+Dockerfile
+docker-compose.yml
