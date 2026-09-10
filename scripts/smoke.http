@@ -1,0 +1,142 @@
+### Todo Management API - end-to-end smoke test
+### Use with the VS Code "REST Client" extension or JetBrains HTTP client.
+### Run top to bottom. Variables carry between requests.
+
+@base = http://localhost:8080
+
+### Health
+GET {{base}}/health
+
+### Register user A
+# @name registerA
+POST {{base}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Alice Example",
+  "email": "alice@example.com",
+  "password": "password123"
+}
+
+### Register user A again -> 409
+POST {{base}}/api/auth/register
+Content-Type: application/json
+
+{ "name": "Alice", "email": "alice@example.com", "password": "password123" }
+
+### Register with bad input -> 400 with errors map
+POST {{base}}/api/auth/register
+Content-Type: application/json
+
+{ "name": "x", "email": "not-an-email", "password": "short" }
+
+### Login user A (captures token)
+# @name loginA
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "alice@example.com", "password": "password123" }
+
+@tokenA = {{loginA.response.body.data.token}}
+
+### Access todos without a token -> 401
+GET {{base}}/api/todos
+
+### Create a category
+# @name category
+POST {{base}}/api/categories
+Content-Type: application/json
+Authorization: Bearer {{tokenA}}
+
+{ "name": "Work" }
+
+@categoryId = {{category.response.body.data.id}}
+
+### Create todo 1
+# @name todo1
+POST {{base}}/api/todos
+Content-Type: application/json
+Authorization: Bearer {{tokenA}}
+
+{
+  "title": "Complete backend assignment",
+  "description": "Develop Todo APIs using Golang and Fiber",
+  "status": "pending",
+  "priority": "high",
+  "due_date": "2026-09-15",
+  "category_ids": [{{categoryId}}]
+}
+
+@todoId = {{todo1.response.body.data.id}}
+
+### Create todo 2
+POST {{base}}/api/todos
+Content-Type: application/json
+Authorization: Bearer {{tokenA}}
+
+{ "title": "Write README", "priority": "medium", "status": "in_progress" }
+
+### Create todo 3
+POST {{base}}/api/todos
+Content-Type: application/json
+Authorization: Bearer {{tokenA}}
+
+{ "title": "Ship it", "priority": "low", "status": "pending", "due_date": "2026-10-01" }
+
+### List page 1, limit 2
+GET {{base}}/api/todos?page=1&limit=2&sort=created_at&order=desc
+Authorization: Bearer {{tokenA}}
+
+### Filter: pending + high
+GET {{base}}/api/todos?status=pending&priority=high
+Authorization: Bearer {{tokenA}}
+
+### Search by title
+GET {{base}}/api/todos?search=backend
+Authorization: Bearer {{tokenA}}
+
+### Get todo by id
+GET {{base}}/api/todos/{{todoId}}
+Authorization: Bearer {{tokenA}}
+
+### Update todo
+PUT {{base}}/api/todos/{{todoId}}
+Content-Type: application/json
+Authorization: Bearer {{tokenA}}
+
+{ "title": "Complete backend assignment (revised)", "priority": "medium" }
+
+### Patch status
+PATCH {{base}}/api/todos/{{todoId}}/status
+Content-Type: application/json
+Authorization: Bearer {{tokenA}}
+
+{ "status": "completed" }
+
+### Register user B
+# @name loginB
+POST {{base}}/api/auth/register
+Content-Type: application/json
+
+{ "name": "Bob Example", "email": "bob@example.com", "password": "password123" }
+
+### Login user B
+# @name loginBauth
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "bob@example.com", "password": "password123" }
+
+@tokenB = {{loginBauth.response.body.data.token}}
+
+### User B tries to read user A's todo -> 404
+GET {{base}}/api/todos/{{todoId}}
+Authorization: Bearer {{tokenB}}
+
+### Delete (soft) todo as user A
+DELETE {{base}}/api/todos/{{todoId}}
+Authorization: Bearer {{tokenA}}
+
+### Confirm it's gone from the list
+GET {{base}}/api/todos
+Authorization: Bearer {{tokenA}}
