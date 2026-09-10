@@ -27,3 +27,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Local-only manual test UI (dev aid, not part of the deliverable)
+/web/

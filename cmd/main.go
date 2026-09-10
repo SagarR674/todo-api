@@ -16,6 +16,7 @@ import (
 	"github.com/SagarR674/todo-api/pkg/logger"
 	"github.com/SagarR674/todo-api/routes"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 )
@@ -48,6 +49,11 @@ func main() {
 
 	app.Use(requestid.New())
 	app.Use(recover.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: cfg.CORSOrigins,
+		AllowMethods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+		AllowHeaders: "Origin,Content-Type,Accept,Authorization",
+	}))
 	app.Use(middleware.RequestLogger())
 	app.Use(middleware.RateLimiter(cfg.RateLimitMax, cfg.RateLimitWindow))
 

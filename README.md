@@ -125,6 +125,7 @@ cp .env.example .env      # Windows: copy .env.example .env
 | `RATE_LIMIT_WINDOW` | Global rate-limit window | `1m` |
 | `AUTH_RATE_LIMIT_MAX` | Requests per window for `/api/auth/*` | `10` |
 | `AUTH_RATE_LIMIT_WINDOW` | Auth rate-limit window | `1m` |
+| `CORS_ORIGINS` | Comma-separated allowed browser origins (`*` = any) | `*` |
 | `LOG_LEVEL` | `debug` / `info` / `warn` / `error` | `info` |
 
 `.env` is git-ignored. **Never commit real credentials or secrets.**

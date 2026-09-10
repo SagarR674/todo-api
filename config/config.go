@@ -32,6 +32,8 @@ type Config struct {
 	AuthRateLimitMax    int
 	AuthRateLimitWindow time.Duration
 
+	CORSOrigins string
+
 	LogLevel string
 }
 
@@ -42,15 +44,16 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		AppEnv:     getEnv("APP_ENV", "development"),
-		Port:       getEnv("PORT", "8080"),
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnv("DB_PORT", "3306"),
-		DBUser:     getEnv("DB_USER", "root"),
-		DBPassword: getEnv("DB_PASSWORD", ""),
-		DBName:     getEnv("DB_NAME", "todo_db"),
-		JWTSecret:  getEnv("JWT_SECRET", ""),
-		LogLevel:   getEnv("LOG_LEVEL", "info"),
+		AppEnv:      getEnv("APP_ENV", "development"),
+		Port:        getEnv("PORT", "8080"),
+		DBHost:      getEnv("DB_HOST", "localhost"),
+		DBPort:      getEnv("DB_PORT", "3306"),
+		DBUser:      getEnv("DB_USER", "root"),
+		DBPassword:  getEnv("DB_PASSWORD", ""),
+		DBName:      getEnv("DB_NAME", "todo_db"),
+		JWTSecret:   getEnv("JWT_SECRET", ""),
+		CORSOrigins: getEnv("CORS_ORIGINS", "*"),
+		LogLevel:    getEnv("LOG_LEVEL", "info"),
 	}
 
 	cfg.JWTExpiry = getEnvDuration("JWT_EXPIRY", 24*time.Hour)
