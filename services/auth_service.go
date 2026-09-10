@@ -12,12 +12,12 @@ import (
 
 // AuthService handles registration and login.
 type AuthService struct {
-	users *repository.UserRepository
-	jwt   *utils.JWTManager
+	users UserRepo
+	jwt   TokenIssuer
 }
 
 // NewAuthService builds an AuthService.
-func NewAuthService(users *repository.UserRepository, jwt *utils.JWTManager) *AuthService {
+func NewAuthService(users UserRepo, jwt TokenIssuer) *AuthService {
 	return &AuthService{users: users, jwt: jwt}
 }
 
@@ -68,6 +68,18 @@ func (s *AuthService) Login(req dto.LoginRequest) (string, *models.User, error) 
 		return "", nil, err
 	}
 	return token, user, nil
+}
+
+// Profile returns the account for the given user ID (used by GET /api/auth/me).
+func (s *AuthService) Profile(userID uint) (*models.User, error) {
+	user, err := s.users.FindByID(userID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil, ErrInvalidCredentials
+		}
+		return nil, err
+	}
+	return user, nil
 }
 
 func normalizeEmail(email string) string {

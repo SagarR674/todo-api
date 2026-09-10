@@ -12,13 +12,8 @@ import (
 
 	"github.com/SagarR674/todo-api/config"
 	"github.com/SagarR674/todo-api/database"
-	"github.com/SagarR674/todo-api/middleware"
 	"github.com/SagarR674/todo-api/pkg/logger"
-	"github.com/SagarR674/todo-api/routes"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"github.com/SagarR674/todo-api/server"
 )
 
 func main() {
@@ -32,6 +27,14 @@ func main() {
 	logger.Init(cfg.LogLevel)
 	log := logger.L()
 
+	if cfg.AutoMigrate {
+		if err := database.MigrateUp(cfg); err != nil {
+			log.Error("auto-migration failed", "error", err)
+			os.Exit(1)
+		}
+		log.Info("database migrations applied")
+	}
+
 	db, err := database.Connect(cfg)
 	if err != nil {
 		log.Error("failed to connect to database", "error", err)
@@ -39,25 +42,7 @@ func main() {
 	}
 	log.Info("database connected", "name", cfg.DBName, "host", cfg.DBHost)
 
-	app := fiber.New(fiber.Config{
-		AppName:               "Todo Management API",
-		ErrorHandler:          middleware.ErrorHandler,
-		DisableStartupMessage: true,
-		ReadTimeout:           15 * time.Second,
-		WriteTimeout:          15 * time.Second,
-	})
-
-	app.Use(requestid.New())
-	app.Use(recover.New())
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: cfg.CORSOrigins,
-		AllowMethods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-		AllowHeaders: "Origin,Content-Type,Accept,Authorization",
-	}))
-	app.Use(middleware.RequestLogger())
-	app.Use(middleware.RateLimiter(cfg.RateLimitMax, cfg.RateLimitWindow))
-
-	routes.Setup(app, cfg, db)
+	app := server.New(cfg, db)
 
 	// graceful shutdown
 	go func() {

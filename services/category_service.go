@@ -11,11 +11,11 @@ import (
 
 // CategoryService holds the business logic for categories/tags.
 type CategoryService struct {
-	categories *repository.CategoryRepository
+	categories CategoryRepo
 }
 
 // NewCategoryService builds a CategoryService.
-func NewCategoryService(categories *repository.CategoryRepository) *CategoryService {
+func NewCategoryService(categories CategoryRepo) *CategoryService {
 	return &CategoryService{categories: categories}
 }
 

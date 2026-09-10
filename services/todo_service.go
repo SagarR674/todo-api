@@ -11,11 +11,11 @@ import (
 
 // TodoService holds the business logic for todo management.
 type TodoService struct {
-	todos *repository.TodoRepository
+	todos TodoRepo
 }
 
 // NewTodoService builds a TodoService.
-func NewTodoService(todos *repository.TodoRepository) *TodoService {
+func NewTodoService(todos TodoRepo) *TodoService {
 	return &TodoService{todos: todos}
 }
 
