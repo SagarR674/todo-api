@@ -39,6 +39,10 @@ Content-Type: application/json
 
 @tokenA = {{loginA.response.body.data.token}}
 
+### Current user
+GET {{base}}/api/auth/me
+Authorization: Bearer {{tokenA}}
+
 ### Access todos without a token -> 401
 GET {{base}}/api/todos
 

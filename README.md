@@ -1,5 +1,7 @@
 # Todo Management API
 
+[![CI](https://github.com/SagarR674/todo-api/actions/workflows/ci.yml/badge.svg)](https://github.com/SagarR674/todo-api/actions/workflows/ci.yml)
+
 A backend REST API for a Todo Management System, built with **Go** and the
 **Fiber** web framework, backed by **MySQL**. It provides user registration and
 login with **JWT authentication**, and full CRUD for per-user todos with
@@ -17,10 +19,12 @@ logging and rate limiting.
 - [Project overview](#project-overview)
 - [Technology stack](#technology-stack)
 - [Project structure](#project-structure)
-- [Installation](#installation)
+- [Quick start with Docker](#quick-start-with-docker)
+- [Installation (local Go)](#installation-local-go)
 - [Environment setup](#environment-setup)
 - [Database setup](#database-setup)
 - [Run the application](#run-the-application)
+- [Testing](#testing)
 - [API documentation](#api-documentation)
 - [Response format](#response-format)
 - [Notes on design decisions](#notes-on-design-decisions)
@@ -37,16 +41,17 @@ The API lets a user:
    Every todo operation is scoped to the authenticated user — you can never see
    or touch another user's todo.
 3. List todos with **pagination**, **filtering** (status, priority, category),
-   **search** (by title) and **sorting** (created date, due date, priority,
-   title).
+   **search** (by title) and **sorting** (created date, updated date, due date,
+   priority, title).
 4. Organise todos with **categories / tags** (e.g. Work, Personal, Learning).
 5. Deletes are **soft** — rows are marked `deleted_at` and excluded from all
    reads, never physically removed.
 
 Cross-cutting concerns: consistent JSON response envelope, correct HTTP status
 codes, request validation with per-field error messages, structured JSON
-logging of every request plus application/database errors, and IP-based rate
-limiting (stricter on the auth endpoints).
+logging of every request plus application/database errors, IP-based rate
+limiting (stricter on the auth endpoints), CORS, request IDs and graceful
+shutdown.
 
 ## Technology stack
 
@@ -59,10 +64,11 @@ limiting (stricter on the auth endpoints).
 | Auth | JWT — [`golang-jwt/jwt/v5`](https://github.com/golang-jwt/jwt) (HS256) |
 | Password hashing | `golang.org/x/crypto/bcrypt` |
 | Validation | [`go-playground/validator/v10`](https://github.com/go-playground/validator) |
-| Migrations | [`golang-migrate/migrate/v4`](https://github.com/golang-migrate/migrate) (used as a library — no CLI install needed) |
+| Migrations | [`golang-migrate/migrate/v4`](https://github.com/golang-migrate/migrate), SQL **embedded** in the binary |
 | Config | `github.com/joho/godotenv` + `os` |
 | Logging | Standard library `log/slog` (structured JSON) |
-| Rate limiting / request IDs | Fiber built-in `limiter` and `requestid` middleware |
+| Rate limiting / CORS / request IDs | Fiber built-in middleware |
+| Tests | stdlib `testing` + `net/http/httptest`; CI on GitHub Actions with a MySQL service |
 
 ## Project structure
 
@@ -70,34 +76,57 @@ limiting (stricter on the auth endpoints).
 todo-api/
 ├── cmd/
 │   ├── main.go              # API entrypoint
-│   └── migrate/main.go      # migration runner (up/down/version/force)
-├── config/                  # env -> Config struct
+│   └── migrate/main.go      # migration CLI (up/down/version/force)
+├── config/                  # env -> Config struct (+ unit tests)
 ├── database/
 │   ├── database.go          # GORM connection + pool + auto-create DB
+│   ├── migrate.go           # run embedded migrations (used by app, CLI and tests)
 │   └── schema.sql           # consolidated schema (readable reference)
-├── models/                  # User, Todo, Category, Date (date-only type)
-├── dto/                     # request/response payloads + validation rules
+├── models/                  # User, Todo, Category, Date (date-only type) (+ tests)
+├── dto/                     # request/response payloads + validation rules (+ tests)
 ├── repository/              # data access (GORM), all queries scoped by user
-├── services/                # business logic, ownership rules, domain errors
+├── services/                # business logic, ownership rules, domain errors (+ tests)
 ├── controllers/             # thin Fiber handlers
-├── middleware/              # JWT auth, rate limiter, request logger, error handler
-├── routes/                  # dependency wiring + route table
+├── middleware/              # JWT auth, rate limiter, CORS, request logger, error handler
+├── routes/                  # route table
+├── server/                  # assembles the Fiber app (shared by main + tests)
 ├── pkg/logger/              # slog setup + GORM logger adapter
-├── migrations/              # versioned .up.sql / .down.sql pairs
+├── migrations/              # versioned .up.sql / .down.sql pairs (embedded via //go:embed)
+├── test/                    # black-box HTTP integration tests
 ├── postman/                 # Postman collection
 ├── scripts/smoke.http       # end-to-end manual request file
+├── .github/workflows/ci.yml # build + vet + staticcheck + race tests
+├── Dockerfile               # multi-stage, distroless, non-root
+├── docker-compose.yml       # api + mysql, one command
 ├── .env.example
-├── go.mod / go.sum
 ├── Makefile
 └── README.md
 ```
 
-## Installation
+## Quick start with Docker
+
+The fastest way to run everything (no Go or MySQL install needed):
+
+```bash
+docker compose up --build
+```
+
+This starts MySQL, waits for it to be healthy, applies migrations automatically
+(`AUTO_MIGRATE=true`), and serves the API on <http://localhost:8080>.
+
+```bash
+curl http://localhost:8080/health
+```
+
+Override secrets/ports with a `.env` file or shell environment (see
+`docker-compose.yml` for the variables it reads).
+
+## Installation (local Go)
 
 Prerequisites: **Go 1.27+** and a running **MySQL 8.0** server.
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/SagarR674/todo-api.git
 cd todo-api
 go mod download
 ```
@@ -110,21 +139,17 @@ Copy the example file and fill in real values:
 cp .env.example .env      # Windows: copy .env.example .env
 ```
 
-| Variable | Meaning | Example |
+| Variable | Meaning | Default |
 | --- | --- | --- |
 | `APP_ENV` | `development` or `production` | `development` |
 | `PORT` | HTTP port | `8080` |
-| `DB_HOST` | MySQL host | `localhost` |
-| `DB_PORT` | MySQL port | `3306` |
-| `DB_USER` | MySQL user | `root` |
-| `DB_PASSWORD` | MySQL password | `secret` |
+| `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` | MySQL connection | `localhost` / `3306` / `root` / — |
 | `DB_NAME` | Database name (auto-created if missing) | `todo_db` |
-| `JWT_SECRET` | Signing secret (min 16 chars; use a long random string) | `openssl rand -hex 32` |
+| `AUTO_MIGRATE` | Apply pending migrations on startup | `false` |
+| `JWT_SECRET` | Signing secret, min 16 chars (use `openssl rand -hex 32`) | — (required) |
 | `JWT_EXPIRY` | Token lifetime (Go duration) | `24h` |
-| `RATE_LIMIT_MAX` | Requests per window, global | `100` |
-| `RATE_LIMIT_WINDOW` | Global rate-limit window | `1m` |
-| `AUTH_RATE_LIMIT_MAX` | Requests per window for `/api/auth/*` | `10` |
-| `AUTH_RATE_LIMIT_WINDOW` | Auth rate-limit window | `1m` |
+| `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW` | Global rate limit | `100` / `1m` |
+| `AUTH_RATE_LIMIT_MAX` / `AUTH_RATE_LIMIT_WINDOW` | Stricter limit for `/api/auth/*` | `10` / `1m` |
 | `CORS_ORIGINS` | Comma-separated allowed browser origins (`*` = any) | `*` |
 | `LOG_LEVEL` | `debug` / `info` / `warn` / `error` | `info` |
 
@@ -132,18 +157,18 @@ cp .env.example .env      # Windows: copy .env.example .env
 
 ## Database setup
 
-The app and the migration runner both **create the database automatically** if
-it does not exist (dev convenience). You only need MySQL running and valid
-credentials in `.env`.
-
-Apply the schema with the bundled migration runner (no external CLI required):
+The app and the migration CLI both **create the database automatically** if it
+does not exist. Migrations are embedded in the binary, so no external CLI or
+files are required:
 
 ```bash
 go run ./cmd/migrate up          # apply all migrations
-go run ./cmd/migrate version     # show current version
+go run ./cmd/migrate version     # show current schema version
 go run ./cmd/migrate down        # roll back the last migration
 go run ./cmd/migrate down-all    # roll back everything
 ```
+
+Or let the server run them on boot: set `AUTO_MIGRATE=true`.
 
 Prefer raw SQL? `database/schema.sql` is a consolidated, readable copy:
 
@@ -159,11 +184,41 @@ go run ./cmd
 go build -o bin/todo-api ./cmd && ./bin/todo-api
 ```
 
-Server starts on `http://localhost:8080`. Check it:
+Server starts on <http://localhost:8080>. Check it:
 
 ```bash
 curl http://localhost:8080/health
 ```
+
+## Testing
+
+The suite has two layers:
+
+| Layer | Location | Needs a database? |
+| --- | --- | --- |
+| Unit tests | `config/`, `utils/`, `models/`, `dto/`, `services/` | No |
+| HTTP integration tests | `test/` | Yes — its own MySQL schema |
+
+```bash
+make test-unit          # fast, no database
+make test-integration   # full HTTP flow against MySQL
+make test               # everything
+make cover              # everything + coverage summary
+```
+
+The integration suite uses a **separate schema** (`TEST_DB_NAME`, default
+`<DB_NAME>_test`) so it can create and truncate tables freely. It reads
+`TEST_DB_*` environment variables and falls back to the `DB_*` values. If the
+database is unreachable the suite **skips** itself; set `REQUIRE_DB=1` (as CI
+does) to make an unreachable database a failure instead.
+
+```bash
+# example: run integration tests against a local MySQL
+TEST_DB_PASSWORD=secret REQUIRE_DB=1 go test ./test/...
+```
+
+CI (`.github/workflows/ci.yml`) runs `gofmt` check, `go vet`, `staticcheck`, and
+`go test -race` against a MySQL 8.0 service container on every push and PR.
 
 ## API documentation
 
@@ -175,6 +230,7 @@ Base URL: `http://localhost:8080`
 | --- | --- | --- | --- | --- |
 | POST | `/api/auth/register` | — | `{ "name", "email", "password" }` | `201` |
 | POST | `/api/auth/login` | — | `{ "email", "password" }` | `200` + `{ token, user }` |
+| GET | `/api/auth/me` | Bearer | — | `200` + current user |
 
 `password` must be at least 8 characters. `email` must be unique and valid.
 
@@ -220,13 +276,22 @@ Base URL: `http://localhost:8080`
 | `sort` | `due_date` | one of `created_at`, `updated_at`, `due_date`, `priority`, `title` |
 | `order` | `desc` | `asc` or `desc` (default `desc`) |
 
+Response `data`:
+
+```json
+{
+  "items": [ /* todos */ ],
+  "pagination": { "page": 1, "limit": 10, "total": 42, "total_pages": 5, "has_next": true, "has_prev": false }
+}
+```
+
 Example: `GET /api/todos?status=pending&priority=high&sort=due_date&order=asc&page=1&limit=10`
 
 ### Categories (require auth)
 
 | Method | Path | Body | Success |
 | --- | --- | --- | --- |
-| POST | `/api/categories` | `{ "name": "Work" }` | `201` |
+| POST | `/api/categories` | `{ "name": "Work" }` | `201` (`409` on duplicate) |
 | GET | `/api/categories` | — | `200` |
 
 ### Meta
@@ -246,13 +311,9 @@ successful login, so the protected requests work immediately.
 
 Every response uses one envelope.
 
-Success:
-
 ```json
 { "success": true, "message": "Todo created successfully", "data": { } }
 ```
-
-Error:
 
 ```json
 { "success": false, "message": "Todo not found" }
@@ -269,22 +330,29 @@ Validation error (`400`):
 ```
 
 HTTP status codes: `200` OK · `201` Created · `400` validation/bad input ·
-`401` missing/invalid/expired token · `403` forbidden · `404` not found ·
-`409` duplicate (email / category) · `429` rate limited · `500` server error.
+`401` missing/invalid/expired token · `404` not found · `409` duplicate
+(email / category) · `429` rate limited · `500` server error.
 
 ## Notes on design decisions
 
 - **Layered architecture** — `controllers → services → repository`. Controllers
   only parse/validate and format; services hold business rules and ownership
-  checks; repositories are the only place that touches GORM.
+  checks; repositories are the only place that touches GORM. Services depend on
+  small interfaces (`services.UserRepo`, `services.TodoRepo`, …) so business
+  logic is unit-tested with in-memory fakes.
 - **Ownership** — every todo/category query includes `user_id = <current user>`.
-  Accessing someone else's todo returns `404` (not `403`) so the API does not
-  leak whether that ID exists.
+  Accessing another user's todo returns **`404`, not `403`**, so the API does not
+  leak whether that ID exists (a common security practice). The brief lists
+  `403` as an example status code, not a requirement.
 - **Soft delete** — `Todo` embeds `gorm.DeletedAt`; GORM automatically filters
-  soft-deleted rows from every read.
-- **Migrations as source of truth** — `AutoMigrate` is intentionally not used;
-  the schema is defined by versioned SQL in `migrations/`.
-- **Minimal dependencies** — logging is stdlib `log/slog`; rate limiting and
-  request IDs use Fiber's built-in middleware.
+  soft-deleted rows from every read. The row and its `deleted_at` timestamp
+  remain in the table.
+- **Migrations as source of truth** — GORM `AutoMigrate` is intentionally not
+  used; the schema is versioned SQL in `migrations/`, embedded into the binary
+  via `//go:embed` and run through `golang-migrate`.
+- **Minimal dependencies** — logging is stdlib `log/slog`; rate limiting, CORS
+  and request IDs use Fiber's built-in middleware.
+- **Same wiring everywhere** — `server.New()` builds the app for both the main
+  binary and the integration tests, so tests exercise the real middleware stack.
 - **Graceful shutdown** — `SIGINT`/`SIGTERM` drain in-flight requests and close
   the DB pool.
