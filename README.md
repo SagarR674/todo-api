@@ -233,6 +233,7 @@ Example: `GET /api/todos?status=pending&priority=high&sort=due_date&order=asc&pa
 
 | Method | Path | Description |
 | --- | --- | --- |
+| GET | `/` | API name, version and endpoint map |
 | GET | `/health` | service + database health |
 
 ### Postman collection
