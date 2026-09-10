@@ -9,9 +9,12 @@ bin/
 web/
 scripts/
 postman/
+test/
+**/*_test.go
 *.md
 !README.md
 coverage.out
 *.log
 Dockerfile
 docker-compose.yml
+Makefile

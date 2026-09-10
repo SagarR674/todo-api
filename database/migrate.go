@@ -19,7 +19,7 @@ const (
 	Up Direction = iota
 	// Down rolls the schema all the way back.
 	Down
-	// Step rolls back exactly one migration.
+	// StepDown rolls back exactly one migration.
 	StepDown
 )
 
