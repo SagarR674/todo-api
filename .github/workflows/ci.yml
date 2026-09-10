@@ -72,15 +72,8 @@ jobs:
       - name: Build
         run: go build ./...
 
-      - name: Wait for MySQL
-        run: |
-          for i in $(seq 1 30); do
-            if mysqladmin ping -h 127.0.0.1 -proot --silent; then
-              echo "MySQL is up"; break
-            fi
-            echo "waiting for MySQL ($i)"; sleep 2
-          done
-
+      # The MySQL service is started with a health check, and GitHub Actions
+      # waits for it to report healthy before running these steps.
       - name: Test (race + coverage)
         run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
 
