@@ -110,6 +110,8 @@ type Pagination struct {
 	Limit      int   `json:"limit"`
 	Total      int64 `json:"total"`
 	TotalPages int   `json:"total_pages"`
+	HasNext    bool  `json:"has_next"`
+	HasPrev    bool  `json:"has_prev"`
 }
 
 const timeLayout = "2006-01-02T15:04:05Z07:00"
@@ -140,5 +142,12 @@ func NewPagination(page, limit int, total int64) Pagination {
 	if limit > 0 {
 		totalPages = int((total + int64(limit) - 1) / int64(limit))
 	}
-	return Pagination{Page: page, Limit: limit, Total: total, TotalPages: totalPages}
+	return Pagination{
+		Page:       page,
+		Limit:      limit,
+		Total:      total,
+		TotalPages: totalPages,
+		HasNext:    page < totalPages,
+		HasPrev:    page > 1 && total > 0,
+	}
 }

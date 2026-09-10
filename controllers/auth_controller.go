@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"github.com/SagarR674/todo-api/dto"
+	"github.com/SagarR674/todo-api/middleware"
 	"github.com/SagarR674/todo-api/services"
 	"github.com/SagarR674/todo-api/utils"
 	"github.com/gofiber/fiber/v2"
@@ -48,4 +49,13 @@ func (h *AuthController) Login(c *fiber.Ctx) error {
 		Token: token,
 		User:  dto.NewUserResponse(user),
 	})
+}
+
+// Me handles GET /api/auth/me and returns the authenticated user.
+func (h *AuthController) Me(c *fiber.Ctx) error {
+	user, err := h.auth.Profile(middleware.UserID(c))
+	if err != nil {
+		return serviceError(c, err)
+	}
+	return utils.Success(c, fiber.StatusOK, "Current user", dto.NewUserResponse(user))
 }

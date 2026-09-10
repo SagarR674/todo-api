@@ -34,6 +34,8 @@ func serviceError(c *fiber.Ctx, err error) error {
 	case errors.Is(err, services.ErrInvalidCredentials):
 		return utils.Error(c, fiber.StatusUnauthorized, err.Error())
 	case errors.Is(err, services.ErrTodoNotFound):
+		// Also returned when a todo exists but belongs to another user: 404
+		// (rather than 403) avoids leaking that the id exists.
 		return utils.Error(c, fiber.StatusNotFound, err.Error())
 	case errors.Is(err, services.ErrCategoryNotFound):
 		return utils.Error(c, fiber.StatusBadRequest, err.Error())

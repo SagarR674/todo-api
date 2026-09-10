@@ -50,10 +50,12 @@ func Setup(app *fiber.App, cfg *config.Config, db *gorm.DB) {
 
 	api := app.Group("/api")
 
+	// Stricter, shared rate limit on the credential endpoints (not on /me).
+	authLimiter := middleware.RateLimiter(cfg.AuthRateLimitMax, cfg.AuthRateLimitWindow)
 	auth := api.Group("/auth")
-	auth.Use(middleware.RateLimiter(cfg.AuthRateLimitMax, cfg.AuthRateLimitWindow))
-	auth.Post("/register", authController.Register)
-	auth.Post("/login", authController.Login)
+	auth.Post("/register", authLimiter, authController.Register)
+	auth.Post("/login", authLimiter, authController.Login)
+	auth.Get("/me", authGuard, authController.Me)
 
 	// --- protected -----------------------------------------------------
 	todos := api.Group("/todos", authGuard)
