@@ -34,6 +34,8 @@ type Config struct {
 
 	CORSOrigins string
 
+	AutoMigrate bool
+
 	LogLevel string
 }
 
@@ -61,6 +63,7 @@ func Load() (*Config, error) {
 	cfg.RateLimitWindow = getEnvDuration("RATE_LIMIT_WINDOW", time.Minute)
 	cfg.AuthRateLimitMax = getEnvInt("AUTH_RATE_LIMIT_MAX", 10)
 	cfg.AuthRateLimitWindow = getEnvDuration("AUTH_RATE_LIMIT_WINDOW", time.Minute)
+	cfg.AutoMigrate = getEnvBool("AUTO_MIGRATE", false)
 
 	if err := cfg.validate(); err != nil {
 		return nil, err
@@ -121,6 +124,15 @@ func getEnvInt(key string, fallback int) int {
 	if v, ok := os.LookupEnv(key); ok && v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			return n
+		}
+	}
+	return fallback
+}
+
+func getEnvBool(key string, fallback bool) bool {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			return b
 		}
 	}
 	return fallback

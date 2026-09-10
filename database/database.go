@@ -44,11 +44,20 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
+// openSQL opens a database/sql connection with the mysql driver.
+func openSQL(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, fmt.Errorf("open sql connection: %w", err)
+	}
+	return db, nil
+}
+
 // ensureDatabase connects without selecting a schema and creates it if needed.
 func ensureDatabase(cfg *config.Config) error {
-	root, err := sql.Open("mysql", cfg.RootDSN())
+	root, err := openSQL(cfg.RootDSN())
 	if err != nil {
-		return fmt.Errorf("open root connection: %w", err)
+		return err
 	}
 	defer root.Close()
 
