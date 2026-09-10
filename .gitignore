@@ -1,0 +1,29 @@
+# Environment / secrets
+.env
+*.env
+!.env.example
+
+# Binaries
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+todo-api
+main
+
+# Go
+/vendor/
+*.test
+*.out
+coverage.*
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
