@@ -34,6 +34,18 @@ func Setup(app *fiber.App, cfg *config.Config, db *gorm.DB) {
 	authGuard := middleware.Auth(jwtManager)
 
 	// --- public ---------------------------------------------------------
+	app.Get("/", func(c *fiber.Ctx) error {
+		return utils.Success(c, fiber.StatusOK, "Todo Management API", fiber.Map{
+			"version": "1.0.0",
+			"health":  "/health",
+			"docs":    "see README.md and postman/TodoAPI.postman_collection.json",
+			"endpoints": fiber.Map{
+				"auth":       []string{"POST /api/auth/register", "POST /api/auth/login"},
+				"todos":      []string{"POST /api/todos", "GET /api/todos", "GET /api/todos/:id", "PUT /api/todos/:id", "PATCH /api/todos/:id/status", "DELETE /api/todos/:id"},
+				"categories": []string{"POST /api/categories", "GET /api/categories"},
+			},
+		})
+	})
 	app.Get("/health", healthController.Check)
 
 	api := app.Group("/api")
