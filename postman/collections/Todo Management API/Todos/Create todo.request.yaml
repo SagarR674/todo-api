@@ -1,0 +1,27 @@
+$kind: http-request
+url: "{{base_url}}/api/todos"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+body:
+  type: text
+  content: |-
+    {
+      "title": "Complete backend assignment",
+      "description": "Develop Todo APIs using Golang and Fiber",
+      "status": "pending",
+      "priority": "high",
+      "due_date": "2026-09-15",
+      "category_ids": [{{category_id}}]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+      if (json && json.data && json.data.id) {
+        pm.collectionVariables.set('todo_id', json.data.id);
+      }
+      pm.test('status is 201', () => pm.response.to.have.status(201));
+    language: text/javascript
+order: 1000

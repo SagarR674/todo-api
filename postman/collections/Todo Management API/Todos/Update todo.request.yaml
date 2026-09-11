@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/api/todos/{{todo_id}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+body:
+  type: text
+  content: |-
+    {
+      "title": "Complete backend assignment (revised)",
+      "description": "Add filtering, sorting and pagination",
+      "status": "in_progress",
+      "priority": "medium",
+      "due_date": "2026-09-20"
+    }
+order: 4000

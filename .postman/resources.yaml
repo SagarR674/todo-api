@@ -1,0 +1,13 @@
+# Use this workspace to collaborate
+workspace:
+  id: 20ac5bc2-d6b1-426a-8bc8-f7d8b5552585
+
+cloudResources:
+  collections:
+    ../postman/collections/Todo Management API: cb284c05-94b0-4fe3-99db-40108679b07e
+
+# All resources in the `postman/` folder are automatically registered in Local View.
+# Point to additional files outside the `postman/` folder to register them individually. Example:
+#localResources:
+#  collections:
+#    - ../tests/E2E Test Collection/

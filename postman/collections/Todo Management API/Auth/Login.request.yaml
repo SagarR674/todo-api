@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{base_url}}/api/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "email": "alice@example.com",
+      "password": "password123"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+      if (json && json.data && json.data.token) {
+        pm.collectionVariables.set('token', json.data.token);
+        console.log('Saved token to collection variable');
+      }
+      pm.test('status is 200', () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 2000

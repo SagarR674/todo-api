@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{base_url}}/api/categories"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+body:
+  type: text
+  content: |-
+    {
+      "name": "Work"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const json = pm.response.json();
+      if (json && json.data && json.data.id) {
+        pm.collectionVariables.set('category_id', json.data.id);
+      }
+    language: text/javascript
+order: 1000

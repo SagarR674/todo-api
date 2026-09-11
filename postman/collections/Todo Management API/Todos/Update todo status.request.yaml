@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{base_url}}/api/todos/{{todo_id}}/status"
+method: PATCH
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+body:
+  type: text
+  content: |-
+    {
+      "status": "completed"
+    }
+order: 5000

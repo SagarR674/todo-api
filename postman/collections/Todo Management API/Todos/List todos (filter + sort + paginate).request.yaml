@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{base_url}}/api/todos?page=1&limit=10&status=pending&priority=high&search=backend&sort=due_date&order=asc"
+method: GET
+headers:
+  Authorization: Bearer {{token}}
+queryParams:
+  page: "1"
+  limit: "10"
+  status: pending
+  priority: high
+  search: backend
+  sort: due_date
+  order: asc
+order: 2000

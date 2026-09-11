@@ -1,0 +1,13 @@
+$kind: collection
+description: |-
+  Todo Management API built with Go + Fiber + MySQL + JWT.
+
+  Usage:
+  1. Set the `base_url` variable (default http://localhost:8080).
+  2. Run `Auth > Register` then `Auth > Login`. Login auto-saves the JWT to the `token` collection variable.
+  3. All Todo and Category requests use `{{token}}` automatically.
+variables:
+  base_url: http://localhost:8080
+  token: ""
+  todo_id: ""
+  category_id: ""
